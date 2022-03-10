@@ -56,12 +56,12 @@ func (watcher *ProgressWatcher) Watch() error {
 				}
 
 				// 被删除的进程列表
-				for _, pid := range Difference(curProcs, watcher.procs) {
-					watcher.Event <- NewProgressEvent(pid, EventCreate)
-				}
-				// 新建的进程列表
 				for _, pid := range Difference(watcher.procs, curProcs) {
 					watcher.Event <- NewProgressEvent(pid, EventDelete)
+				}
+				// 新建的进程列表
+				for _, pid := range Difference(curProcs, watcher.procs) {
+					watcher.Event <- NewProgressEvent(pid, EventCreate)
 				}
 
 				watcher.procs = curProcs

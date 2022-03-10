@@ -36,3 +36,27 @@ func TestProgressWatcher(t *testing.T) {
 		t.Fatalf("获取 PID == 1 的进程超时")
 	}
 }
+
+func TestProgressEvent(t *testing.T) {
+	t.Parallel()
+
+	createEvent := lib.NewProgressEvent(10, lib.EventCreate)
+
+	if !createEvent.IsCreate() {
+		t.Fatalf("ProgressEvent CreateEvent 失败")
+	}
+
+	if createEvent.PID != 10 {
+		t.Fatalf("ProgressEvent CreateEvent PID 失败")
+	}
+
+	deleteEvent := lib.NewProgressEvent(20, lib.EventDelete)
+
+	if !deleteEvent.IsDelete() {
+		t.Fatalf("ProgressEvent DeleteEvent 失败")
+	}
+
+	if deleteEvent.PID != 20 {
+		t.Fatalf("ProgressEvent DeleteEvent PID 失败")
+	}
+}
