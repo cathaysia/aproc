@@ -1,44 +1,23 @@
 package lib
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
 // 获取当前进程列表
-func GetProgressList() *[]string {
-	// 检查时候存在名为 name 的进程
+func GetCurrentProgressList() ([]int, error) {
 	dirs, err := ioutil.ReadDir("/proc")
 	if err != nil {
-		log.Fatalln(err)
+		return nil, errors.New("不存在 /proc 路径")
 	}
 
-	result := make([]string, 0)
-
-	for _, dir := range dirs {
-		if dir.IsDir() {
-			commFile := fmt.Sprintf("/proc/%v/comm", dir.Name())
-			if _, err := os.Stat(commFile); err == nil {
-				// 这里就能判断出来是进程代表的文件夹了
-				result = append(result, dir.Name())
-			}
-		}
-	}
-
-	return &result
-}
-
-func HasProgress(name string) []string {
-	// 检查时候存在名为 name 的进程
-	dirs, err := ioutil.ReadDir("/proc")
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	result := make([]string, 0)
+	result := make([]int, 0)
 
 	for _, dir := range dirs {
 		if !dir.IsDir() {
@@ -47,12 +26,48 @@ func HasProgress(name string) []string {
 
 		commFile := fmt.Sprintf("/proc/%v/comm", dir.Name())
 
-		if _, err := os.Stat(commFile); err == nil {
-			if proc, err := ioutil.ReadFile(commFile); err == nil {
-				proc := strings.ReplaceAll(string(proc), "\n", "")
-				if proc == name {
-					result = append(result, dir.Name())
-				}
+		// 判断出来文件夹是不是进程代表的文件夹
+		if _, err := os.Stat(commFile); err != nil {
+			continue
+		}
+
+		if pid, err := strconv.Atoi(dir.Name()); err == nil {
+			result = append(result, pid)
+		}
+	}
+
+	return result, nil
+}
+
+func HasProgress(name string) []int {
+	// 检查是否存在名为 name 的进程
+	dirs, err := ioutil.ReadDir("/proc")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	result := make([]int, 0)
+
+	for _, dir := range dirs {
+		if !dir.IsDir() {
+			continue
+		}
+
+		commFile := fmt.Sprintf("/proc/%v/comm", dir.Name())
+
+		if _, err := os.Stat(commFile); err != nil {
+			continue
+		}
+
+		if proc, err := ioutil.ReadFile(commFile); err == nil {
+			proc := strings.ReplaceAll(string(proc), "\n", "")
+
+			if proc != name {
+				continue
+			}
+
+			if pid, err := strconv.Atoi(dir.Name()); err == nil {
+				result = append(result, pid)
 			}
 		}
 	}

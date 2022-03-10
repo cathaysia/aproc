@@ -3,8 +3,8 @@ package lib
 // https://blog.csdn.net/yiweiyi329/article/details/101030510
 
 // 求并集
-func Union(slice1, slice2 []string) []string {
-	map1 := make(map[string]int)
+func Union(slice1, slice2 []int) []int {
+	map1 := make(map[int]int)
 	for _, v := range slice1 {
 		map1[v]++
 	}
@@ -15,13 +15,14 @@ func Union(slice1, slice2 []string) []string {
 			slice1 = append(slice1, v)
 		}
 	}
+
 	return slice1
 }
 
 // 求交集
-func Intersect(slice1, slice2 []string) []string {
-	map1 := make(map[string]int)
-	result := make([]string, 0)
+func Intersect(slice1, slice2 []int) []int {
+	map1 := make(map[int]int)
+	result := make([]int, 0)
 
 	for _, v := range slice1 {
 		map1[v]++
@@ -33,13 +34,14 @@ func Intersect(slice1, slice2 []string) []string {
 			result = append(result, v)
 		}
 	}
+
 	return result
 }
 
 // 求差集 slice1-并集
-func Difference(slice1, slice2 []string) []string {
-	map1 := make(map[string]int)
-	result := make([]string, 0)
+func Difference(slice1, slice2 []int) []int {
+	map1 := make(map[int]int)
+	result := make([]int, 0)
 	inter := Intersect(slice1, slice2)
 
 	for _, v := range inter {
@@ -52,6 +54,7 @@ func Difference(slice1, slice2 []string) []string {
 			result = append(result, value)
 		}
 	}
+
 	return result
 }
 
@@ -69,6 +72,25 @@ func StringSliceEqualBCE(str1, str2 []string) bool {
 	str2 = str2[:len(str1)]
 	for i, v := range str1 {
 		if v != str2[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func IntSliceEqualBCE(slice1, slice2 []int) bool {
+	if len(slice1) != len(slice2) {
+		return false
+	}
+
+	if (slice1 == nil) != (slice2 == nil) {
+		return false
+	}
+
+	slice2 = slice2[:len(slice1)]
+	for i, v := range slice1 {
+		if v != slice2[i] {
 			return false
 		}
 	}

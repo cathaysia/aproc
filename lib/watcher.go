@@ -1,15 +1,15 @@
 package lib
 
 import (
+	"errors"
 	"os"
-	"strconv"
 	"time"
 )
 
 type ProgressWatcher struct {
 	duration    int64       // 多久检查一次进程变动
 	timer       *time.Timer // 定时器定时器会在每次检查结束后开始计时
-	procs       *[]string   // 保存的上次进程列表，用来和当前进程进行 diff
+	procs       []int       // 保存的上次进程列表，用来和当前进程进行 diff
 	exit        chan bool   // 布尔标志位，用来通知 Watch() 退出
 	waitForExit chan bool   // 布尔标志位，用来
 	hadBeenWait bool        // 布尔标志位，用来查看 Watch 时候已经被调用过了
@@ -22,7 +22,7 @@ func NewProgressWatcher(second int64) *ProgressWatcher {
 	return &ProgressWatcher{
 		duration:    second,
 		timer:       time.NewTimer(time.Second * time.Duration(second)),
-		procs:       nil,
+		procs:       make([]int, 0),
 		exit:        make(chan bool),
 		waitForExit: make(chan bool),
 		hadBeenWait: false,
@@ -41,37 +41,30 @@ func (watcher *ProgressWatcher) Watch() error {
 	watcher.hadBeenWait = true
 
 	if _, err := os.Stat("/proc"); err != nil {
-		return err
+		return errors.New("不存在 /proc 路径")
 	}
 
 	go func() {
 		for {
 			select {
 			case <-watcher.timer.C:
-				if watcher.procs == nil {
-					for _, proc := range *GetProgressList() {
-						if pid, err := strconv.Atoi(proc); err == nil {
-							watcher.Event <- NewProgressEvent(pid, EventCreate)
-						}
-					}
+				curProcs, err := GetCurrentProgressList()
+				if err != nil {
+					watcher.Error <- err
 
 					continue
 				}
 
-				curProcs := GetProgressList()
-
 				// 被删除的进程列表
-				for _, proc := range Difference(*watcher.procs, *curProcs) {
-					if pid, err := strconv.Atoi(proc); err == nil {
-						watcher.Event <- NewProgressEvent(pid, EventCreate)
-					}
+				for _, pid := range Difference(curProcs, watcher.procs) {
+					watcher.Event <- NewProgressEvent(pid, EventCreate)
 				}
 				// 新建的进程列表
-				for _, proc := range Difference(*curProcs, *watcher.procs) {
-					if pid, err := strconv.Atoi(proc); err == nil {
-						watcher.Event <- NewProgressEvent(pid, EventDelete)
-					}
+				for _, pid := range Difference(watcher.procs, curProcs) {
+					watcher.Event <- NewProgressEvent(pid, EventDelete)
 				}
+
+				watcher.procs = curProcs
 				// 重置定时器
 				watcher.timer.Reset(time.Second * time.Duration(watcher.duration))
 			case <-watcher.exit:
@@ -82,11 +75,17 @@ func (watcher *ProgressWatcher) Watch() error {
 			}
 		}
 	}()
+
 	return nil
 }
 
+// 请求退出
 func (watcher *ProgressWatcher) Exit() {
 	watcher.exit <- true
+}
+
+// 阻塞至 watcher 退出
+func (watcher *ProgressWatcher) WaitForExit() {
 	<-watcher.waitForExit
 }
 
