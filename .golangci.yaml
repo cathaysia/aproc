@@ -8,4 +8,5 @@ linters:
     - godot
     - gochecknoinits
     - exhaustivestruct
+    - wrapcheck
 
