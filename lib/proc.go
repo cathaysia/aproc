@@ -11,13 +11,13 @@ import (
 )
 
 // 获取当前进程列表
-func GetCurrentProgressList() ([]int, error) {
+func GetCurrentProgressList() ([]uint64, error) {
 	dirs, err := ioutil.ReadDir("/proc")
 	if err != nil {
 		return nil, errors.New("不存在 /proc 路径")
 	}
 
-	result := make([]int, 0)
+	result := make([]uint64, 0)
 
 	for _, dir := range dirs {
 		if !dir.IsDir() {
@@ -32,11 +32,22 @@ func GetCurrentProgressList() ([]int, error) {
 		}
 
 		if pid, err := strconv.Atoi(dir.Name()); err == nil {
-			result = append(result, pid)
+			result = append(result, uint64(pid))
 		}
 	}
 
 	return result, nil
+}
+
+func GetProgressNameByPID(pid uint64) (string, error) {
+	proc, err := ioutil.ReadFile(fmt.Sprintf("/proc/%v/comm", pid))
+	if err != nil {
+		return "", err
+	}
+
+	res := strings.ReplaceAll(string(proc), "\n", "")
+
+	return res, nil
 }
 
 func HasProgress(name string) []int {

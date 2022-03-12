@@ -9,7 +9,7 @@ import (
 type ProgressWatcher struct {
 	duration    int64       // 多久检查一次进程变动
 	timer       *time.Timer // 定时器定时器会在每次检查结束后开始计时
-	procs       []int       // 保存的上次进程列表，用来和当前进程进行 diff
+	procs       []uint64    // 保存的上次进程列表，用来和当前进程进行 diff
 	exit        chan bool   // 布尔标志位，用来通知 Watch() 退出
 	WaitForExit chan bool   // 布尔标志位，用来
 	hadBeenWait bool        // 布尔标志位，用来查看 Watch 时候已经被调用过了
@@ -22,7 +22,7 @@ func NewProgressWatcher(second int64) *ProgressWatcher {
 	return &ProgressWatcher{
 		duration:    second,
 		timer:       time.NewTimer(time.Second * time.Duration(second)),
-		procs:       make([]int, 0),
+		procs:       make([]uint64, 0),
 		exit:        make(chan bool),
 		WaitForExit: make(chan bool),
 		hadBeenWait: false,
@@ -92,11 +92,11 @@ const (
 )
 
 type ProgressEvent struct {
-	PID       int
+	PID       uint64
 	eventType EventType
 }
 
-func NewProgressEvent(pid int, eType EventType) *ProgressEvent {
+func NewProgressEvent(pid uint64, eType EventType) *ProgressEvent {
 	return &ProgressEvent{
 		PID:       pid,
 		eventType: eType,
