@@ -11,7 +11,7 @@ type ProgressWatcher struct {
 	timer       *time.Timer // 定时器定时器会在每次检查结束后开始计时
 	procs       []int       // 保存的上次进程列表，用来和当前进程进行 diff
 	exit        chan bool   // 布尔标志位，用来通知 Watch() 退出
-	waitForExit chan bool   // 布尔标志位，用来
+	WaitForExit chan bool   // 布尔标志位，用来
 	hadBeenWait bool        // 布尔标志位，用来查看 Watch 时候已经被调用过了
 
 	Event chan *ProgressEvent
@@ -24,7 +24,7 @@ func NewProgressWatcher(second int64) *ProgressWatcher {
 		timer:       time.NewTimer(time.Second * time.Duration(second)),
 		procs:       make([]int, 0),
 		exit:        make(chan bool),
-		waitForExit: make(chan bool),
+		WaitForExit: make(chan bool),
 		hadBeenWait: false,
 
 		Event: make(chan *ProgressEvent),
@@ -69,7 +69,7 @@ func (watcher *ProgressWatcher) Watch() error {
 				watcher.timer.Reset(time.Second * time.Duration(watcher.duration))
 			case <-watcher.exit:
 				watcher.timer.Stop()
-				watcher.waitForExit <- true
+				watcher.WaitForExit <- true
 
 				break
 			}
@@ -82,11 +82,6 @@ func (watcher *ProgressWatcher) Watch() error {
 // 请求退出
 func (watcher *ProgressWatcher) Exit() {
 	watcher.exit <- true
-}
-
-// 阻塞至 watcher 退出
-func (watcher *ProgressWatcher) WaitForExit() {
-	<-watcher.waitForExit
 }
 
 type EventType int
