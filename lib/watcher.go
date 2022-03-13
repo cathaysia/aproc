@@ -32,7 +32,7 @@ func NewProgressWatcher(second int64) *ProgressWatcher {
 	}
 }
 
-// 监控 /proc 路径
+// 启动 watch 逻辑
 func (watcher *ProgressWatcher) Watch() error {
 	if watcher.hadBeenWait {
 		return nil

@@ -1,7 +1,9 @@
 package lib
 
 import (
+	"container/list"
 	"log"
+	"runtime"
 
 	v2 "github.com/containerd/cgroups/v2"
 )
@@ -14,10 +16,10 @@ func DeleteManager(manager *v2.Manager) {
 
 var (
 	rootManager *v2.Manager
-	period      uint64
+	managers    list.List
 )
 
-func GetInstanceOfRootManager() (*v2.Manager, error) {
+func getRootManager() (*v2.Manager, error) {
 	if rootManager != nil {
 		return rootManager, nil
 	}
@@ -28,26 +30,39 @@ func GetInstanceOfRootManager() (*v2.Manager, error) {
 		return nil, err
 	}
 
+	runtime.SetFinalizer(rootManager, DeleteManager)
+
 	return rootManager, nil
 }
 
-func init() {
-	period = 100 * 1000
-}
-
-func CreateManager(pid int64, resources *v2.Resources) (*v2.Manager, error) {
-	rootManager, err := GetInstanceOfRootManager()
+func CreateManager(pid uint64, name string, resources *v2.Resources) (*v2.Manager, error) {
+	rootManager, err := getRootManager()
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: get a name by pid
-	var name string
 
 	subManager, err := rootManager.NewChild(name, resources)
 	if err != nil {
 		return nil, err
 	}
 
+	managers.PushBack(subManager)
+	runtime.SetFinalizer(subManager, DeleteManager)
+
 	return subManager, nil
+}
+
+func CleanManager() {
+	for elment := managers.Front(); elment != nil; elment = elment.Next() {
+		if m, ok := elment.Value.(*v2.Manager); ok {
+			res, err := m.Procs(true)
+			if err != nil {
+				continue
+			}
+
+			if len(res) == 0 {
+				managers.Remove(elment)
+			}
+		}
+	}
 }

@@ -6,23 +6,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	v2 "github.com/containerd/cgroups/v2"
 )
 
 var (
-	rootManager *v2.Manager
-	settings    []lib.Settings
-	err         error
+	settings []lib.Settings
+	err      error
 )
 
 // 根据
 func createCGroupForPID(pid uint64) error {
-	rootManager, err = lib.GetInstanceOfRootManager()
-	if err != nil {
-		return err
-	}
-
 	procName, err := lib.GetProgressNameByPID(pid)
 	if err != nil {
 		return err
@@ -30,17 +22,20 @@ func createCGroupForPID(pid uint64) error {
 
 	for _, v := range settings {
 		if v.Proc == procName {
-			// 这里要检查时候已经存在了
-			manager, err := rootManager.NewChild(procName, &v.Resources)
+			// 这里要检查是否已经存在了
+			manager, err := lib.CreateManager(pid, procName, &v.Resources)
 			if err != nil {
 				return err
 			}
 
 			err = manager.AddProc(pid)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	return err
+	return nil
 }
 
 func main() {
@@ -54,12 +49,6 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	rootManager, err := lib.GetInstanceOfRootManager()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	defer lib.DeleteManager(rootManager)
 	// 监控 /proc 目录的变动
 	watcher := lib.NewProgressWatcher(2)
 
@@ -69,9 +58,14 @@ func main() {
 			case event := <-watcher.Event:
 				if event.IsCreate() {
 					log.Printf("%v is Created\n", event.PID)
-					createCGroupForPID(uint64(event.PID))
+
+					if err := createCGroupForPID(event.PID); err != nil {
+						watcher.Error <- err
+					}
 				} else if event.IsDelete() {
 					log.Printf("%v is Deleted\n", event.PID)
+
+					lib.CleanManager()
 				}
 			case err := <-watcher.Error:
 				log.Println(err)
