@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"errors"
 	"os"
 	"time"
 )
@@ -41,7 +40,7 @@ func (watcher *ProgressWatcher) Watch() error {
 	watcher.hadBeenWait = true
 
 	if _, err := os.Stat("/proc"); err != nil {
-		return errors.New("不存在 /proc 路径")
+		return ErrSystemNotSupport
 	}
 
 	go func() {

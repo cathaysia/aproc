@@ -49,8 +49,12 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	sigInt := make(chan os.Signal, 2)
+	signal.Notify(sigInt, syscall.SIGINT)
 	// 监控 /proc 目录的变动
 	watcher := lib.NewProgressWatcher(2)
+	watchExit := make(chan bool)
+	waitExit := make(chan bool)
 
 	go func() {
 		for {
@@ -69,10 +73,13 @@ func main() {
 				}
 			case err := <-watcher.Error:
 				log.Println(err)
-				watcher.Exit()
+				signal.Notify(sigInt, syscall.SIGINT) // 请求退出进程
+			case <-watchExit: // 等待退出协程
+				waitExit <- true
 
-				break
+				return
 			}
+
 		}
 	}()
 
@@ -81,12 +88,12 @@ func main() {
 	}
 
 	//
-	sigInt := make(chan os.Signal, 2)
-	signal.Notify(sigInt, syscall.SIGINT)
 
 	if <-sigInt == syscall.SIGINT {
-		watcher.Exit()
-		<-watcher.WaitForExit
+		watcher.Exit()        // 通知 watcher 退出
+		<-watcher.WaitForExit // 等待 watcher 退出
+		watchExit <- true     // 通知轮询协程退出
+		<-waitExit            // 等待轮询协程退出
 
 		return
 	}

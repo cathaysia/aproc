@@ -10,7 +10,7 @@ import (
 
 func DeleteManager(manager *v2.Manager) {
 	if err := manager.Delete(); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 }
 
