@@ -2,15 +2,15 @@ package lib
 
 import (
 	"container/list"
-	"log"
 	"runtime"
 
 	v2 "github.com/containerd/cgroups/v2"
+	"github.com/sirupsen/logrus"
 )
 
 func DeleteManager(manager *v2.Manager) {
 	if err := manager.Delete(); err != nil {
-		log.Println(err)
+		logrus.Errorln(err)
 	}
 }
 

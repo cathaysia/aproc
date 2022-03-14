@@ -2,10 +2,11 @@ package main
 
 import (
 	"aproc/lib"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -15,6 +16,9 @@ var (
 
 // 根据
 func createCGroupForPID(pid uint64) error {
+	logrus.SetLevel(logrus.TraceLevel)
+	logrus.SetReportCaller(true)
+
 	procName, err := lib.GetProgressNameByPID(pid)
 	if err != nil {
 		return err
@@ -41,12 +45,12 @@ func createCGroupForPID(pid uint64) error {
 func main() {
 	// 检查是否是超级用户
 	if os.Getenv("HOME") != "/root" {
-		log.Fatalln("请使用超级用户运行此程序")
+		logrus.Fatalln("请使用超级用户运行此程序")
 	}
 
 	settings, err = lib.GetSettings()
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 	}
 
 	sigInt := make(chan os.Signal, 2)
@@ -61,38 +65,38 @@ func main() {
 			select {
 			case event := <-watcher.Event:
 				if event.IsCreate() {
-					log.Printf("%v is Created\n", event.PID)
+					logrus.Debugf("%v is Created\n", event.PID)
 
 					if err := createCGroupForPID(event.PID); err != nil {
 						watcher.Error <- err
 					}
 				} else if event.IsDelete() {
-					log.Printf("%v is Deleted\n", event.PID)
+					logrus.Debugf("%v is Deleted\n", event.PID)
 
 					lib.CleanManager()
 				}
 			case err := <-watcher.Error:
-				log.Println(err)
+				logrus.Errorln(err)
 				signal.Notify(sigInt, syscall.SIGINT) // 请求退出进程
 			case <-watchExit: // 等待退出协程
 				waitExit <- true
 
 				return
 			}
-
 		}
 	}()
 
 	if err := watcher.Watch(); err != nil {
-		log.Println(err)
+		logrus.Errorln(err)
 	}
 
 	//
 
 	if <-sigInt == syscall.SIGINT {
-		watcher.Exit()        // 通知 watcher 退出
+		watcher.Exit()    // 通知 watcher 退出
+		watchExit <- true // 通知轮询协程退出
+
 		<-watcher.WaitForExit // 等待 watcher 退出
-		watchExit <- true     // 通知轮询协程退出
 		<-waitExit            // 等待轮询协程退出
 
 		return
