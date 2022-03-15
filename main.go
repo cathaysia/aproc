@@ -86,11 +86,7 @@ func main() {
 		}
 	}()
 
-	if err := watcher.Watch(); err != nil {
-		logrus.Errorln(err)
-	}
-
-	//
+	watcher.Watch()
 
 	if <-sigInt == syscall.SIGINT {
 		watcher.Exit()    // 通知 watcher 退出

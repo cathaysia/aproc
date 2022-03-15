@@ -32,15 +32,15 @@ func NewProgressWatcher(second int64) *ProgressWatcher {
 }
 
 // 启动 watch 逻辑
-func (watcher *ProgressWatcher) Watch() error {
+func (watcher *ProgressWatcher) Watch() {
 	if watcher.hadBeenWait {
-		return nil
+		return
 	}
 
 	watcher.hadBeenWait = true
 
 	if _, err := os.Stat("/proc"); err != nil {
-		return ErrSystemNotSupport
+		watcher.Error <- ErrSystemNotSupport
 	}
 
 	go func() {
@@ -74,8 +74,6 @@ func (watcher *ProgressWatcher) Watch() error {
 			}
 		}
 	}()
-
-	return nil
 }
 
 // 请求退出
