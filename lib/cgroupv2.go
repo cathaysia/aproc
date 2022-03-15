@@ -2,17 +2,10 @@ package lib
 
 import (
 	"container/list"
-	"runtime"
 
 	v2 "github.com/containerd/cgroups/v2"
 	"github.com/sirupsen/logrus"
 )
-
-func DeleteManager(manager *v2.Manager) {
-	if err := manager.Delete(); err != nil {
-		logrus.Errorln(err)
-	}
-}
 
 var (
 	rootManager *v2.Manager
@@ -30,8 +23,6 @@ func getRootManager() (*v2.Manager, error) {
 		return nil, err
 	}
 
-	runtime.SetFinalizer(rootManager, DeleteManager)
-
 	return rootManager, nil
 }
 
@@ -47,20 +38,23 @@ func CreateManager(pid uint64, name string, resources *v2.Resources) (*v2.Manage
 	}
 
 	managers.PushBack(subManager)
-	runtime.SetFinalizer(subManager, DeleteManager)
 
 	return subManager, nil
 }
 
 func CleanManager() {
 	for elment := managers.Front(); elment != nil; elment = elment.Next() {
-		if m, ok := elment.Value.(*v2.Manager); ok {
-			res, err := m.Procs(true)
+		if manager, ok := elment.Value.(*v2.Manager); ok {
+			res, err := manager.Procs(true)
 			if err != nil {
 				continue
 			}
 
 			if len(res) == 0 {
+				if err := manager.Delete(); err != nil {
+					logrus.Errorln(err)
+				}
+
 				managers.Remove(elment)
 			}
 		}
