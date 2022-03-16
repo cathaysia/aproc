@@ -6,7 +6,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
 )
 
@@ -56,15 +55,10 @@ func main() {
 	sigInt := make(chan os.Signal, 2)
 	signal.Notify(sigInt, syscall.SIGINT)
 	// 监控 /etc/aproc/settings.json 的变动
-	settingWatcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-	defer settingWatcher.Close()
+	settingWatcher := lib.NewSettingWatcher()
+	settingWatcher.Watch()
 
-	if err := settingWatcher.Add("/etc/aproc"); err != nil {
-		logrus.Fatalln(err)
-	}
+	defer settingWatcher.Close()
 
 	// 监控 /proc 目录的变动
 	watcher := lib.NewProgressWatcher(2000)
@@ -89,13 +83,7 @@ func main() {
 		case err := <-watcher.Error:
 			logrus.Errorln(err)
 			signal.Notify(sigInt, syscall.SIGINT) // 请求退出进程
-		case _, ok := <-settingWatcher.Events:
-			if !ok {
-				signal.Notify(sigInt, syscall.SIGINT)
-
-				continue
-			}
-
+		case <-settingWatcher.Event:
 			if settings, err = lib.GetSettings(); err != nil {
 				watcher.Error <- err
 
@@ -107,13 +95,8 @@ func main() {
 			if err := lib.ReloadManager(settings); err != nil {
 				watcher.Error <- err
 			}
-		case err, ok := <-settingWatcher.Errors:
-			if !ok {
-				signal.Notify(sigInt, syscall.SIGINT)
-
-				continue
-			}
-			watcher.Error <- err
+		case err := <-settingWatcher.Error:
+			watcher.Error <- err // 将 err 处理移交
 		case res := <-sigInt:
 			if res == syscall.SIGINT {
 				return
