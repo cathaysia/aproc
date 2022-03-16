@@ -70,6 +70,8 @@ func main() {
 	watcher := lib.NewProgressWatcher(2000)
 	watcher.Watch()
 
+	defer watcher.Close()
+
 	for {
 		select {
 		case event := <-watcher.Event:
@@ -114,9 +116,6 @@ func main() {
 			watcher.Error <- err
 		case res := <-sigInt:
 			if res == syscall.SIGINT {
-				watcher.Exit()
-				<-watcher.WaitForExit
-
 				return
 			}
 		}

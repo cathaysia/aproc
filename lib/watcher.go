@@ -77,8 +77,9 @@ func (watcher *ProgressWatcher) Watch() {
 }
 
 // 请求退出
-func (watcher *ProgressWatcher) Exit() {
+func (watcher *ProgressWatcher) Close() {
 	watcher.exit <- true
+	<-watcher.WaitForExit // 阻塞至退出
 }
 
 type EventType int
