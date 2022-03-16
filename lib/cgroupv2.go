@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//go:linkname setResources github.com/containerd/cgroups/v2/manager.setResources
+//go:linkname setResources github.com/containerd/cgroups/v2.setResources
 func setResources(path string, resources *v2.Resources) error
 
 type Manager struct { // v2.Manager for access private path
