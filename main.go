@@ -56,7 +56,7 @@ func main() {
 	sigInt := make(chan os.Signal, 2)
 	signal.Notify(sigInt, syscall.SIGINT)
 	// 监控 /proc 目录的变动
-	watcher := lib.NewProgressWatcher(2)
+	watcher := lib.NewProgressWatcher(2000)
 	watchExit := make(chan bool)
 	waitExit := make(chan bool)
 

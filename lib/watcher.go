@@ -6,7 +6,7 @@ import (
 )
 
 type ProgressWatcher struct {
-	duration    int64       // 多久检查一次进程变动
+	duration    int64       // 多久检查一次进程变动，单位为毫秒
 	timer       *time.Timer // 定时器定时器会在每次检查结束后开始计时
 	procs       []uint64    // 保存的上次进程列表，用来和当前进程进行 diff
 	exit        chan bool   // 布尔标志位，用来通知 Watch() 退出
@@ -17,10 +17,10 @@ type ProgressWatcher struct {
 	Error chan error
 }
 
-func NewProgressWatcher(second int64) *ProgressWatcher {
+func NewProgressWatcher(msecond int64) *ProgressWatcher {
 	return &ProgressWatcher{
-		duration:    second,
-		timer:       time.NewTimer(time.Second * time.Duration(second)),
+		duration:    msecond,
+		timer:       time.NewTimer(time.Millisecond * time.Duration(msecond)),
 		procs:       make([]uint64, 0),
 		exit:        make(chan bool),
 		WaitForExit: make(chan bool),
