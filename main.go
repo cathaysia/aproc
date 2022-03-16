@@ -44,7 +44,7 @@ func createCGroupForPID(pid uint64) error {
 
 func main() {
 	// 检查是否是超级用户
-	if os.Getenv("HOME") != "/root" {
+	if os.Geteuid() != 0 {
 		logrus.Fatalln("请使用超级用户运行此程序")
 	}
 
