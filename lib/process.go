@@ -32,16 +32,17 @@ func GetCurrentProgressList() ([]uint64, error) {
 			continue
 		}
 
-		commFile := fmt.Sprintf("/proc/%v/comm", dir.Name())
-
-		// 判断出来文件夹是不是进程代表的文件夹
-		if _, err := os.Stat(commFile); err != nil {
+		pid, err := strconv.Atoi(dir.Name())
+		if err != nil {
 			continue
 		}
 
-		if pid, err := strconv.Atoi(dir.Name()); err == nil {
-			result = append(result, uint64(pid))
+		// 判断出来文件夹是不是进程代表的文件夹
+		if _, err := os.Stat(fmt.Sprintf("/proc/%v/comm", dir.Name())); err != nil {
+			continue
 		}
+
+		result = append(result, uint64(pid))
 	}
 
 	return result, nil
