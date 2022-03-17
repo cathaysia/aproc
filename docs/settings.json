@@ -1,0 +1,59 @@
+[
+    {
+        "Proc": "",
+        "Resources": {
+            "CPU": {
+                "Weight": 0,
+                "Max": "",
+                "Cpus": "",
+                "Mems": ""
+            },
+            "Memory": {
+                "Swap": 0,
+                "Max": 0,
+                "Low": 0,
+                "High": 0
+            },
+            "Pids": {
+                "Max": 0
+            },
+            "IO": {
+                "BFQ": {
+                    "Weight": 0
+                },
+                "Max": [
+                    {
+                        "Type": "",
+                        "Major": 0,
+                        "Minor": 0,
+                        "Rate": 0
+                    }
+                ]
+            },
+            "RDMA": {
+                "Limit": [
+                    {
+                        "Device": "",
+                        "HcaHandles": 0,
+                        "HcaObjects": 0
+                    }
+                ]
+            },
+            "HugeTlb": [
+                {
+                    "HugePageSize": "",
+                    "Limit": 0
+                }
+            ],
+            "Devices": [
+                {
+                    "allow": false,
+                    "type": "",
+                    "major": 0,
+                    "minor": 0,
+                    "access": ""
+                }
+            ]
+        }
+    }
+]
