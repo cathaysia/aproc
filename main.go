@@ -110,7 +110,7 @@ func main() {
 				continue
 			}
 
-			logrus.Traceln("重载配置")
+			logrus.Info("重载配置")
 
 			if err := lib.ReloadManager(settings); err != nil {
 				watcher.Error <- err
