@@ -1,14 +1,14 @@
-package lib_test
+package internal_test
 
 import (
-	"aproc/lib"
+	"aproc/internal"
 	"testing"
 )
 
 func TestCreateEmptySettings(t *testing.T) {
 	t.Parallel()
 
-	if err := lib.CreateEmptySettings(); err != nil {
+	if err := internal.CreateEmptySettings(); err != nil {
 		t.Fatal(err)
 	}
 }

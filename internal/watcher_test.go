@@ -1,7 +1,7 @@
-package lib_test
+package internal_test
 
 import (
-	"aproc/lib"
+	"aproc/internal"
 	"testing"
 	"time"
 )
@@ -9,7 +9,7 @@ import (
 func TestProgressWatcher(t *testing.T) {
 	t.Parallel()
 
-	watcher := lib.NewProgressWatcher(1)
+	watcher := internal.NewProgressWatcher(1)
 	result := make(chan bool)
 
 	go func() {
@@ -25,9 +25,7 @@ func TestProgressWatcher(t *testing.T) {
 		}
 	}()
 
-	if err := watcher.Watch(); err != nil {
-		t.Fatal(err)
-	}
+	watcher.Watch()
 
 	select {
 	case <-result:
@@ -40,7 +38,7 @@ func TestProgressWatcher(t *testing.T) {
 func TestProgressEvent(t *testing.T) {
 	t.Parallel()
 
-	createEvent := lib.NewProgressEvent(10, lib.EventCreate)
+	createEvent := internal.NewProgressEvent(10, internal.EventCreate)
 
 	if !createEvent.IsCreate() {
 		t.Fatalf("ProgressEvent CreateEvent 失败")
@@ -50,7 +48,7 @@ func TestProgressEvent(t *testing.T) {
 		t.Fatalf("ProgressEvent CreateEvent PID 失败")
 	}
 
-	deleteEvent := lib.NewProgressEvent(20, lib.EventDelete)
+	deleteEvent := internal.NewProgressEvent(20, internal.EventDelete)
 
 	if !deleteEvent.IsDelete() {
 		t.Fatalf("ProgressEvent DeleteEvent 失败")
