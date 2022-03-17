@@ -2,6 +2,7 @@ package main
 
 import (
 	"aproc/lib"
+	"flag"
 	"os"
 	"os/signal"
 	"syscall"
@@ -40,8 +41,28 @@ func createCGroupForPID(pid uint64) error {
 }
 
 func main() {
-	logrus.SetLevel(logrus.TraceLevel)
-	logrus.SetReportCaller(true)
+	// set log level
+	level := flag.String("log-level", "Debug", "Set log level, value can be Trance, Debug, Info, Error, Warning, Fatal, Panic")
+	flag.Parse()
+	logrus.Print(*level)
+
+	switch *level {
+	case "Trace":
+		logrus.SetReportCaller(true)
+		logrus.SetLevel(logrus.TraceLevel)
+	case "Debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "Info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "Error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "Warning":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "Fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "Panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	}
 	// 检查是否是超级用户
 	if os.Geteuid() != 0 {
 		logrus.Fatalln("请使用超级用户运行此程序")
