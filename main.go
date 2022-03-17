@@ -16,9 +16,6 @@ var (
 
 // 根据
 func createCGroupForPID(pid uint64) error {
-	logrus.SetLevel(logrus.TraceLevel)
-	logrus.SetReportCaller(true)
-
 	procName, err := lib.GetProgressNameByPID(pid)
 	if err != nil {
 		return err
@@ -43,6 +40,8 @@ func createCGroupForPID(pid uint64) error {
 }
 
 func main() {
+	logrus.SetLevel(logrus.TraceLevel)
+	logrus.SetReportCaller(true)
 	// 检查是否是超级用户
 	if os.Geteuid() != 0 {
 		logrus.Fatalln("请使用超级用户运行此程序")
