@@ -3,8 +3,8 @@ package internal
 // https://blog.csdn.net/yiweiyi329/article/details/101030510
 
 // 求并集
-func Union(slice1, slice2 []uint64) []uint64 {
-	map1 := make(map[uint64]uint64)
+func Union[T comparable](slice1, slice2 []T) []T {
+	map1 := make(map[T]uint64)
 	for _, v := range slice1 {
 		map1[v]++
 	}
@@ -20,9 +20,9 @@ func Union(slice1, slice2 []uint64) []uint64 {
 }
 
 // 求交集
-func Intersect(slice1, slice2 []uint64) []uint64 {
-	map1 := make(map[uint64]uint64)
-	result := make([]uint64, 0)
+func Intersect[T comparable](slice1, slice2 []T) []T {
+	map1 := make(map[T]uint64)
+	result := make([]T, 0)
 
 	for _, v := range slice1 {
 		map1[v]++
@@ -39,9 +39,9 @@ func Intersect(slice1, slice2 []uint64) []uint64 {
 }
 
 // 求差集 slice1-并集
-func Difference(slice1, slice2 []uint64) []uint64 {
-	map1 := make(map[uint64]uint64)
-	result := make([]uint64, 0)
+func Difference[T comparable](slice1, slice2 []T) []T {
+	map1 := make(map[T]uint64)
+	result := make([]T, 0)
 	inter := Intersect(slice1, slice2)
 
 	for _, v := range inter {
