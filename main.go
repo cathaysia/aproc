@@ -13,7 +13,115 @@ import (
 var (
 	settings []internal.Settings
 	err      error
+	level    string
 )
+
+func main() {
+	parseFlags()
+	setLogLevel(level)
+
+	checkPermission()
+
+	if settings, err = internal.GetSettings(); err != nil {
+		logrus.Fatalln(err)
+	}
+
+	sigInt := make(chan os.Signal, 2)
+	signal.Notify(sigInt, syscall.SIGINT)
+	// 监控 /etc/aproc/settings.json 的变动
+	settingWatcher := internal.NewSettingWatcher()
+	settingWatcher.Watch()
+
+	defer settingWatcher.Close()
+
+	// 监控 /proc 目录的变动
+	procWatcher := internal.NewProgressWatcher(2000)
+	procWatcher.Watch()
+
+	defer procWatcher.Close()
+
+	for {
+		select {
+		case event := <-procWatcher.Event:
+			if err := handleProcressEvent(event); err != nil {
+				procWatcher.Error <- err
+			}
+		case err := <-procWatcher.Error:
+			logrus.Errorln(err)
+			signal.Notify(sigInt, syscall.SIGINT) // 请求退出进程
+		case event := <-settingWatcher.Event:
+			if err := handleSettingsEvent(&event); err != nil {
+				procWatcher.Error <- err
+			}
+		case err := <-settingWatcher.Error:
+			procWatcher.Error <- err // 将 err 处理移交
+		case res := <-sigInt:
+			if res == syscall.SIGINT {
+				return
+			}
+		}
+	}
+}
+
+func setLogLevel(level string) {
+	switch level {
+	case "Trace":
+		logrus.SetReportCaller(true)
+		logrus.SetLevel(logrus.TraceLevel)
+	case "Debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "Info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "Error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "Warning":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "Fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "Panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	}
+}
+
+func parseFlags() {
+	flag.StringVar(&level, "log-level", "Debug", "Set log level, value can be Trance, Debug, Info, Error, Warning, Fatal, Panic")
+	flag.Parse()
+}
+
+func checkPermission() {
+	// 检查是否是超级用户
+	if os.Geteuid() != 0 {
+		logrus.Fatalln("run this program as a superuser")
+	}
+}
+
+func handleProcressEvent(event *internal.ProgressEvent) error {
+	if event.IsCreate() {
+		logrus.Debugf("%v is Created\n", event.PID)
+
+		if err := createCGroupForPID(event.PID); err != nil {
+			return err
+		}
+	} else if event.IsDelete() {
+		logrus.Debugf("%v is Deleted\n", event.PID)
+
+		internal.CleanManager()
+	}
+	return err
+}
+
+func handleSettingsEvent(event *internal.SettingEvent) error {
+	if settings, err = internal.GetSettings(); err != nil {
+		return err
+	}
+
+	logrus.Info("Reload settings")
+
+	if err := internal.ReloadManager(settings); err != nil {
+		return err
+	}
+	return nil
+}
 
 // 根据
 func createCGroupForPID(pid uint64) error {
@@ -38,89 +146,4 @@ func createCGroupForPID(pid uint64) error {
 	}
 
 	return nil
-}
-
-func main() {
-	// set log level
-	level := flag.String("log-level", "Debug", "Set log level, value can be Trance, Debug, Info, Error, Warning, Fatal, Panic")
-	flag.Parse()
-	logrus.Print(*level)
-
-	switch *level {
-	case "Trace":
-		logrus.SetReportCaller(true)
-		logrus.SetLevel(logrus.TraceLevel)
-	case "Debug":
-		logrus.SetLevel(logrus.DebugLevel)
-	case "Info":
-		logrus.SetLevel(logrus.InfoLevel)
-	case "Error":
-		logrus.SetLevel(logrus.ErrorLevel)
-	case "Warning":
-		logrus.SetLevel(logrus.WarnLevel)
-	case "Fatal":
-		logrus.SetLevel(logrus.FatalLevel)
-	case "Panic":
-		logrus.SetLevel(logrus.PanicLevel)
-	}
-	// 检查是否是超级用户
-	if os.Geteuid() != 0 {
-		logrus.Fatalln("请使用超级用户运行此程序")
-	}
-
-	if settings, err = internal.GetSettings(); err != nil {
-		logrus.Fatalln(err)
-	}
-
-	sigInt := make(chan os.Signal, 2)
-	signal.Notify(sigInt, syscall.SIGINT)
-	// 监控 /etc/aproc/settings.json 的变动
-	settingWatcher := internal.NewSettingWatcher()
-	settingWatcher.Watch()
-
-	defer settingWatcher.Close()
-
-	// 监控 /proc 目录的变动
-	watcher := internal.NewProgressWatcher(2000)
-	watcher.Watch()
-
-	defer watcher.Close()
-
-	for {
-		select {
-		case event := <-watcher.Event:
-			if event.IsCreate() {
-				logrus.Debugf("%v is Created\n", event.PID)
-
-				if err := createCGroupForPID(event.PID); err != nil {
-					watcher.Error <- err
-				}
-			} else if event.IsDelete() {
-				logrus.Debugf("%v is Deleted\n", event.PID)
-
-				internal.CleanManager()
-			}
-		case err := <-watcher.Error:
-			logrus.Errorln(err)
-			signal.Notify(sigInt, syscall.SIGINT) // 请求退出进程
-		case <-settingWatcher.Event:
-			if settings, err = internal.GetSettings(); err != nil {
-				watcher.Error <- err
-
-				continue
-			}
-
-			logrus.Info("重载配置")
-
-			if err := internal.ReloadManager(settings); err != nil {
-				watcher.Error <- err
-			}
-		case err := <-settingWatcher.Error:
-			watcher.Error <- err // 将 err 处理移交
-		case res := <-sigInt:
-			if res == syscall.SIGINT {
-				return
-			}
-		}
-	}
 }
