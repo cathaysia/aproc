@@ -7,26 +7,29 @@ import (
 )
 
 type SettingWatcherEvent int
+type void struct{}
 
 const (
 	SettingEventChange SettingWatcherEvent = 0
 )
 
 type SettingWatcher struct {
-	Event       chan SettingWatcherEvent
-	Error       chan error
-	exit        chan bool // 布尔标志位，用来通知 Watch() 退出
-	WaitForExit chan bool // 布尔标志位，用来
+	done        chan void
+	waitForExit chan void
 	once        sync.Once
+
+	Event chan SettingWatcherEvent
+	Error chan error
 }
 
 func NewSettingWatcher() *SettingWatcher {
 	return &SettingWatcher{
-		Event:       make(chan SettingWatcherEvent),
-		Error:       make(chan error),
-		exit:        make(chan bool),
-		WaitForExit: make(chan bool),
+		done:        make(chan void),
+		waitForExit: make(chan void),
 		once:        sync.Once{},
+
+		Event: make(chan SettingWatcherEvent),
+		Error: make(chan error),
 	}
 }
 
@@ -63,8 +66,8 @@ func (watcher *SettingWatcher) watchImpl() {
 					continue
 				}
 				watcher.Error <- err
-			case <-watcher.exit:
-				watcher.WaitForExit <- true
+			case <-watcher.done:
+				close(watcher.waitForExit)
 
 				return
 			}
@@ -73,6 +76,6 @@ func (watcher *SettingWatcher) watchImpl() {
 }
 
 func (watcher *SettingWatcher) Close() {
-	watcher.exit <- true
-	<-watcher.WaitForExit
+	close(watcher.done)
+	<-watcher.waitForExit
 }

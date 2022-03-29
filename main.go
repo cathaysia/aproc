@@ -95,7 +95,7 @@ func checkPermission() {
 	}
 }
 
-func handleProcressEvent(event *internal.ProgressEvent) error {
+func handleProcressEvent(event internal.ProgressEvent) error {
 	if event.IsCreate() {
 		logrus.Debugf("%v is Created\n", event.PID)
 

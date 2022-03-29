@@ -7,26 +7,22 @@ import (
 )
 
 type ProgressWatcher struct {
-	duration    int64       // 多久检查一次进程变动，单位为毫秒
-	timer       *time.Timer // 定时器定时器会在每次检查结束后开始计时
-	procs       []uint64    // 保存的上次进程列表，用来和当前进程进行 diff
-	exit        chan bool   // 布尔标志位，用来通知 Watch() 退出
-	WaitForExit chan bool   // 布尔标志位，用来
+	duration    int64 // 多久检查一次进程变动，单位为毫秒
+	done        chan void
+	waitForExit chan void
 	once        sync.Once
 
-	Event chan *ProgressEvent
+	Event chan ProgressEvent
 	Error chan error
 }
 
 func NewProgressWatcher(msecond int64) *ProgressWatcher {
 	return &ProgressWatcher{
 		duration:    msecond,
-		timer:       time.NewTimer(time.Millisecond * time.Duration(msecond)),
-		procs:       make([]uint64, 0),
-		exit:        make(chan bool),
-		WaitForExit: make(chan bool),
+		done:        make(chan void),
+		waitForExit: make(chan void),
 
-		Event: make(chan *ProgressEvent),
+		Event: make(chan ProgressEvent),
 		Error: make(chan error),
 	}
 }
@@ -43,9 +39,12 @@ func (watcher *ProgressWatcher) watchImpl() {
 	}
 
 	go func() {
+		timer := time.NewTimer(time.Millisecond * time.Duration(watcher.duration))
+		procs := make([]uint64, 0)
+
 		for {
 			select {
-			case <-watcher.timer.C:
+			case <-timer.C:
 				curProcs, err := GetCurrentProgressList()
 				if err != nil {
 					watcher.Error <- err
@@ -54,20 +53,20 @@ func (watcher *ProgressWatcher) watchImpl() {
 				}
 
 				// 被删除的进程列表
-				for _, pid := range Difference(watcher.procs, curProcs) {
-					watcher.Event <- NewProgressEvent(pid, EventDelete)
+				for _, pid := range Difference(procs, curProcs) {
+					watcher.Event <- *NewProgressEvent(pid, EventDelete)
 				}
 				// 新建的进程列表
-				for _, pid := range Difference(curProcs, watcher.procs) {
-					watcher.Event <- NewProgressEvent(pid, EventCreate)
+				for _, pid := range Difference(curProcs, procs) {
+					watcher.Event <- *NewProgressEvent(pid, EventCreate)
 				}
 
-				watcher.procs = curProcs
+				procs = curProcs
 				// 重置定时器
-				watcher.timer.Reset(time.Second * time.Duration(watcher.duration))
-			case <-watcher.exit:
-				watcher.timer.Stop()
-				watcher.WaitForExit <- true
+				timer.Reset(time.Second * time.Duration(watcher.duration))
+			case <-watcher.done:
+				timer.Stop()
+				close(watcher.waitForExit)
 
 				break
 			}
@@ -77,8 +76,8 @@ func (watcher *ProgressWatcher) watchImpl() {
 
 // 请求退出
 func (watcher *ProgressWatcher) Close() {
-	watcher.exit <- true
-	<-watcher.WaitForExit // 阻塞至退出
+	close(watcher.done)
+	<-watcher.waitForExit // 阻塞至退出
 }
 
 type ProcessWatcherEventType int
