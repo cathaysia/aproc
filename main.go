@@ -110,7 +110,7 @@ func handleProcressEvent(event *internal.ProgressEvent) error {
 	return err
 }
 
-func handleSettingsEvent(event *internal.SettingEvent) error {
+func handleSettingsEvent(event *internal.SettingWatcherEvent) error {
 	if settings, err = internal.GetSettings(); err != nil {
 		return err
 	}

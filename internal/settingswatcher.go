@@ -1,40 +1,40 @@
 package internal
 
 import (
+	"sync"
+
 	"github.com/fsnotify/fsnotify"
 )
 
-type SettingEvent int
+type SettingWatcherEvent int
 
 const (
-	SettingEventChange SettingEvent = 0
+	SettingEventChange SettingWatcherEvent = 0
 )
 
 type SettingWatcher struct {
-	Event       chan SettingEvent
+	Event       chan SettingWatcherEvent
 	Error       chan error
-	hadBeenWait bool
 	exit        chan bool // 布尔标志位，用来通知 Watch() 退出
 	WaitForExit chan bool // 布尔标志位，用来
+	once        sync.Once
 }
 
 func NewSettingWatcher() *SettingWatcher {
 	return &SettingWatcher{
-		Event:       make(chan SettingEvent),
+		Event:       make(chan SettingWatcherEvent),
 		Error:       make(chan error),
-		hadBeenWait: false,
 		exit:        make(chan bool),
 		WaitForExit: make(chan bool),
+		once:        sync.Once{},
 	}
 }
 
 func (watcher *SettingWatcher) Watch() {
-	if watcher.hadBeenWait {
-		return
-	}
+	watcher.once.Do(watcher.watchImpl)
+}
 
-	watcher.hadBeenWait = true
-
+func (watcher *SettingWatcher) watchImpl() {
 	settingWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		watcher.Error <- err

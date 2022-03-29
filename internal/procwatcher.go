@@ -2,6 +2,7 @@ package internal
 
 import (
 	"os"
+	"sync"
 	"time"
 )
 
@@ -11,7 +12,7 @@ type ProgressWatcher struct {
 	procs       []uint64    // 保存的上次进程列表，用来和当前进程进行 diff
 	exit        chan bool   // 布尔标志位，用来通知 Watch() 退出
 	WaitForExit chan bool   // 布尔标志位，用来
-	hadBeenWait bool        // 布尔标志位，用来查看 Watch 时候已经被调用过了
+	once        sync.Once
 
 	Event chan *ProgressEvent
 	Error chan error
@@ -24,21 +25,18 @@ func NewProgressWatcher(msecond int64) *ProgressWatcher {
 		procs:       make([]uint64, 0),
 		exit:        make(chan bool),
 		WaitForExit: make(chan bool),
-		hadBeenWait: false,
 
 		Event: make(chan *ProgressEvent),
 		Error: make(chan error),
 	}
 }
 
-// 启动 watch 逻辑
 func (watcher *ProgressWatcher) Watch() {
-	if watcher.hadBeenWait {
-		return
-	}
+	watcher.once.Do(watcher.watchImpl)
+}
 
-	watcher.hadBeenWait = true
-
+// 启动 watch 逻辑
+func (watcher *ProgressWatcher) watchImpl() {
 	if _, err := os.Stat("/proc"); err != nil {
 		watcher.Error <- ErrSystemNotSupport
 		return
@@ -83,19 +81,19 @@ func (watcher *ProgressWatcher) Close() {
 	<-watcher.WaitForExit // 阻塞至退出
 }
 
-type EventType int
+type ProcessWatcherEventType int
 
 const (
-	EventCreate EventType = 0
-	EventDelete EventType = 1
+	EventCreate ProcessWatcherEventType = 0
+	EventDelete ProcessWatcherEventType = 1
 )
 
 type ProgressEvent struct {
 	PID       uint64
-	eventType EventType
+	eventType ProcessWatcherEventType
 }
 
-func NewProgressEvent(pid uint64, eType EventType) *ProgressEvent {
+func NewProgressEvent(pid uint64, eType ProcessWatcherEventType) *ProgressEvent {
 	return &ProgressEvent{
 		PID:       pid,
 		eventType: eType,
