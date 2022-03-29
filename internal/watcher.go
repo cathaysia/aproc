@@ -41,6 +41,7 @@ func (watcher *ProgressWatcher) Watch() {
 
 	if _, err := os.Stat("/proc"); err != nil {
 		watcher.Error <- ErrSystemNotSupport
+		return
 	}
 
 	go func() {
