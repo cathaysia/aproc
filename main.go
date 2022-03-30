@@ -63,23 +63,33 @@ func main() {
 	}
 }
 
+func checkLogLevel(key string, m map[string]logrus.Level) bool {
+	for k := range m {
+		if k == key {
+			return true
+		}
+	}
+	return false
+}
+
 func setLogLevel(level string) {
-	switch level {
-	case "Trace":
+	level_map := map[string]logrus.Level{
+		"Trace":   logrus.TraceLevel,
+		"Debug":   logrus.DebugLevel,
+		"Info":    logrus.InfoLevel,
+		"Error":   logrus.ErrorLevel,
+		"Warning": logrus.WarnLevel,
+		"Fatal":   logrus.FatalLevel,
+	}
+
+	if !checkLogLevel(level, level_map) {
+		return
+	}
+
+	logrus.SetLevel(level_map[level])
+
+	if level == "Trace" {
 		logrus.SetReportCaller(true)
-		logrus.SetLevel(logrus.TraceLevel)
-	case "Debug":
-		logrus.SetLevel(logrus.DebugLevel)
-	case "Info":
-		logrus.SetLevel(logrus.InfoLevel)
-	case "Error":
-		logrus.SetLevel(logrus.ErrorLevel)
-	case "Warning":
-		logrus.SetLevel(logrus.WarnLevel)
-	case "Fatal":
-		logrus.SetLevel(logrus.FatalLevel)
-	case "Panic":
-		logrus.SetLevel(logrus.PanicLevel)
 	}
 }
 
